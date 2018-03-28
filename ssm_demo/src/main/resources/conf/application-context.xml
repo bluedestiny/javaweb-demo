@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:p="http://www.springframework.org/schema/p"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context.xsd
+                           http://www.springframework.org/schema/cache
+                           http://www.springframework.org/schema/cache/spring-cache.xsd
+                           http://www.springframework.org/schema/mvc 
+                           http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd"
+       default-lazy-init="true">
+
+    <!-- 读取配置文件 -->
+    <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+              <!--   <value>classpath:config/redis.properties</value> -->
+                <value>classpath:conf/jdbc.properties</value>
+            </list>
+        </property>
+        <property name="ignoreResourceNotFound" value="true"></property>
+        <property name="ignoreUnresolvablePlaceholders" value="true"></property>
+
+    </bean>
+
+
+    <!-- 不使用sharding jdbc时的数据源配置 -->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="${jdbc.driverClassName}"/>
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <property name="autoCommitOnClose" value="true"/>
+        <property name="checkoutTimeout" value="${cpool.checkoutTimeout}"/>
+        <property name="initialPoolSize" value="${cpool.minPoolSize}"/>
+        <property name="minPoolSize" value="${cpool.minPoolSize}"/>
+        <property name="maxPoolSize" value="${cpool.maxPoolSize}"/>
+        <property name="maxIdleTime" value="${cpool.maxIdleTime}"/>
+        <property name="acquireIncrement" value="${cpool.acquireIncrement}"/>
+        <property name="maxIdleTimeExcessConnections" value="${cpool.maxIdleTimeExcessConnections}"/>
+    </bean>  
+
+     
+
+    <!-- 事务配置开始 -->
+      <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- 引用sharding jdbc框架的datasource,配置在 shardingDs.xml中 -->
+        <property name="dataSource" ref="dataSource"></property>
+        <!-- <property name="dataSource" ref="masterSlaveDataSource"></property> -->
+    </bean> 
+    <!-- 需要事务管理的类中的方法，按照如下的格式进行分类，读写操作方法名必须按照规则 -->
+      <bean id="transactionInterceptor"
+          class="org.springframework.transaction.interceptor.TransactionInterceptor">
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="transactionAttributes">
+            <props>
+                <!-- 读操作 -->
+                <prop key="query*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <prop key="find*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <prop key="get*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <prop key="load*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <prop key="count*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <prop key="list*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <prop key="check*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <prop key="qry*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <prop key="select*">PROPAGATION_SUPPORTS,-Exception</prop>
+                <!-- 写操作 -->
+                <prop key="save*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="del*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="add*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="upd*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="insert*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="creat*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="edit*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="remove*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="gain*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="onlineDb*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="trxqry*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="credit*">PROPAGATION_REQUIRED,-Exception</prop>
+                <prop key="debit*">PROPAGATION_REQUIRED,-Exception</prop>
+
+                <prop key="*">PROPAGATION_SUPPORTS,-Exception</prop>
+
+            </props>
+        </property>
+    </bean>  
+
+    <!-- 根据Name匹配拦截器，所有需要事务管理的Service类接口名称必须为：XxxxxService -->
+     <bean
+            class="org.springframework.aop.framework.autoproxy.BeanNameAutoProxyCreator">
+        <property name="beanNames">
+            <list>
+                <value>*Service</value>
+            </list>
+        </property>
+        <property name="interceptorNames">
+            <list>
+                <!-- 事务管理的Interceptor -->
+                <value>transactionInterceptor</value>
+            </list>
+        </property>
+    </bean>  
+
+    <!-- mybatis配置-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- <property name="dataSource" ref="masterSlaveDataSource" /> -->
+        <property name="dataSource" ref="dataSource"/>
+        <property name="mapperLocations" value="classpath:mybatis/**/*Mapper.xml"/>
+      <!--   <property name="plugins">
+            <array>
+                <bean class="com.github.pagehelper.PageInterceptor">
+                    <property name="properties">
+                        <value>
+                            helperDialect=mysql
+                            reasonable=true
+                        </value>
+                    </property>
+                </bean>
+            </array>
+        </property> -->
+    </bean>  
+    <!--  把扫描到的Mapper接口变成Mapper对象 -->
+      <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 指定要扫描包： 多个包用逗号隔开 -->
+        <property name="basePackage" value="com.jinan.dao"/>
+        <!-- 指定sqlSessionFactory -->
+        <!-- <property name="sqlSessionFactory" ref="sqlSessionFactory"></property> -->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>  
+
+
+    <!-- 注解自动扫描配置，排除了 @Controller的注解，扫描包括 @Repository ,@Service,@Component等-->
+    <context:component-scan base-package="com.jinan">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation"
+                                expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
+    </context:component-scan>
+
+    <context:annotation-config/>
+
+
+    <!-- 配置redis部分 start -->
+
+    <!-- 配置redis连接池  JedisPoolConfig-->
+   <!--  <bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxIdle" value="${redis.maxIdle}"/>
+        <property name="maxTotal" value="${redis.maxTotal}"/>
+    </bean> -->
+    <!-- 配置CoonnectionFactory JedisConnectionFactory-->
+    <!-- <bean id="connFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+        <property name="hostName" value="${redis.hostName}"></property>
+        <property name="port" value="${redis.port}"></property>
+        <property name="poolConfig" ref="poolConfig"></property>
+    </bean> -->
+
+	
+
+    <!-- 配置redisTemplate StringRedisTemplate-->
+   <!--  <bean id="redisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate">
+        <property name="connectionFactory" ref="connFactory"/>
+    </bean> -->
+    
+    <!-- 公共数据树 ,区域数据和level数据-->
+    <!-- <bean id="areaTree" class="com.jfsys.common.tree.AreaTree" init-method="initTreeNode"/>
+    <bean id="levelTree" class="com.jfsys.common.tree.LevelTree" init-method="initTreeNode"/>
+    <bean id="sysParamsBean" class="com.jfsys.service.manage.Params" init-method="init"/>
+    <bean id="schoolChangelist" class="com.jfsys.service.evaluation.pubcache.SchoolChangeList"/>
+    发布指标体系
+    <bean id="pubLevelData" class="com.jfsys.service.evaluation.pubcache.PubLevelTree" init-method="initTreeNode"/>
+    发布试题
+    <bean id="pubQuesData" class="com.jfsys.service.evaluation.pubcache.PubQuesData" init-method="initPubQues"/>
+    发布试题选项
+    <bean id="pubQuesOptionData" class="com.jfsys.service.evaluation.pubcache.PubQuesOptionData" init-method="initPubQuesOption"/>
+    发布公式
+    <bean id="pubForMulaData" class="com.jfsys.service.evaluation.pubcache.PubFormulaData" init-method="initPubForMula"/>
+    试卷试题关系 TblAssPaper
+    <bean id="paperQuesRelData" class="com.jfsys.service.evaluation.pubcache.PaperQuesRelData" init-method="initPaperQuesRel"/>
+    
+    
+    <bean id="cacheManager" class="org.springframework.cache.support.SimpleCacheManager">
+        <property name="caches">
+            <set>
+                <bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                        p:name="default" />
+                <bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                        p:name="paramCache" />
+                <bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                		p:name="areaTreeCache" />
+                <bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                		p:name="levelTreeCache" />
+                <bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                        p:name="pubLevelDataCache" />
+				<bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                        p:name="pubQuesDataCache" />
+				<bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                        p:name="pubQuesOptionDataCache" />
+				<bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                        p:name="pubForMulaDataCache" />
+                <bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                      p:name="schoolChangelistCache" />
+                <bean class="org.springframework.cache.concurrent.ConcurrentMapCacheFactoryBean"
+                  p:name="paperQuesRelDataCache" />
+            </set>
+        </property>
+        
+    </bean> -->
+
+    <!-- session 使用redis缓存 -->
+   <!--  <bean id="redisHttpSessionConfiguration"
+          class="org.springframework.session.data.redis.config.annotation.web.http.RedisHttpSessionConfiguration">
+        <property name="maxInactiveIntervalInSeconds" value="1800"/>       
+    </bean>
+ -->
+	<!-- <mvc:interceptors>  
+    	<mvc:interceptor>  
+        	<mvc:mapping path="/evalution/app/**" />  
+        	<bean class="com.jfsys.security.AppInterceptor" />  
+    	</mvc:interceptor>  
+	</mvc:interceptors> -->
+
+   <!--  <cache:annotation-driven cache-manager="cacheManager"/> -->
+
+    <!-- 下面包含各类配置 -->
+    <!-- sharding jdbc的数据源和策略配置 -->
+    <!-- <import resource="shardingDs.xml"/> -->
+    <!-- 生成验证码配置 -->
+    <!-- <import resource="captcha-context.xml"/>   -->
+    <!-- shiro权限管理配置 -->
+    <!-- <import resource="shiro-context.xml"/> -->
+    <!-- quartz定时任务配置 -->
+   <!--  <import resource="quartz-task.xml"/> -->
+
+</beans>

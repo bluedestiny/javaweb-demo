@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<License>
+  <Data>
+    <LicensedTo> Beijing Huayang-Junfeng Information Engineering Corporation</LicensedTo>
+    <LicenseType>Developer OEM Subscription</LicenseType>
+    <LicenseNote>Limited to 1 developer.</LicenseNote>
+    <OrderID>110316111517</OrderID>
+    <OEM>This is a redistributable license</OEM>
+    <Products>
+      <Product>Aspose.Total for Java</Product>
+    </Products>
+    <EditionType>Enterprise</EditionType>
+    <SerialNumber>a1f19bc2-1d12-4b24-87dc-3649bc68da23</SerialNumber>
+    <SubscriptionExpiry>20120316</SubscriptionExpiry>
+    <LicenseVersion>2.2</LicenseVersion>
+  </Data>
+  <Signature>E469cIu4Hb5TUdf7oiF2mJRJHcKZ9y7iFQ5tUTA4aLFBZ5byNMCPKGsmOd/SPF4rqN+cHm9C5LmGJ4vzgrNdU7UJNWxP8UHxrh0FFGFbOJzIxpGYTx96bM8hOc8AviYnQhXZb/iCSdtmAFFPDpy9wFMxpX5fvCC0fecnStz+wfE=</Signature>
+</License>
